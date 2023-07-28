@@ -1,0 +1,167 @@
+---
+title: "Sampling & Fitting for Twin-t distribution in R"
+author: "Sk Mijanur Rahaman"
+date: "03/06/2022"
+output: pdf_document
+---
+
+```{r}
+library(tidyverse)
+#The pdf of the Twin-t distribution is as follows:
+dtwin_t=function(x,v){(((2^(5/2))*(gamma((v/4)+(3/2))))/
+                  ((sqrt(pi*v))*(gamma(v/4))*(v+1)))*
+                  ((((x^2)/v)+sqrt(1+((x^2)/v)^2))^-((v+1)/2))}
+
+
+#To plot of the pdf of Twin-t distribution for the different values of v
+#i.e v=1, v=2, v=670.
+
+ggplot() + xlim(-6,6)+
+  geom_function(aes(colour = "df = 1"),
+                fun = dtwin_t,args = list(v=1))+
+  geom_function(aes(colour = "df =2"),
+                fun = dtwin_t,args = list(v=2))+
+  geom_function(aes(colour = "df = 670"),
+                fun = dtwin_t,args = list(v=670))+
+  labs(x="x", y="P(x)",colour="Twin-t :",
+       title="The pdf of the twin-t distribution, with different df.")+
+  scale_y_continuous(breaks=seq(0,0.5,.05))+
+  theme(plot.title = element_text( hjust = 0.5,size = 11),
+        legend.position="top", legend.box = "horizontal")
+
+
+
+
+#To plot of The pdf of the twin-t distribution,with  v= 2, along with the 
+#t-distribution, again with  v= 2, and the standard normal distribution 
+#in one plot.
+
+
+ggplot() + xlim(-6,6)+
+  geom_function(aes(colour = "Twin-t, df = 2"),fun = dtwin_t,args = list(v=2))+
+  geom_function(aes(colour = "t, df = 2"), fun = dt, args = list(df = 2))+
+  geom_function(aes(colour = "N(0,1)"),fun = dnorm)+
+  labs(x="x", y="P(x)",colour="PDF :",
+  title=
+  "The pdf of the twin-t distribution, with df=2, along with the t-distribution,
+  again with df=2, and the standard normal distribution.")+
+  scale_y_continuous(breaks=seq(0,0.5,.05))+
+  theme(plot.title = element_text( hjust = 0.5,size = 11),
+        legend.position="top", legend.box = "horizontal")
+
+
+
+#To plot the CDF of the Twin-t distribution for the different values of v
+#i.e v=1, v=2, v=670.
+
+dx=0.01
+x=seq(-6, 6, by = dx)
+quantil=data.frame(x=x,y1=cumsum(dtwin_t(x,v=1) * dx),
+                       y2=cumsum(dtwin_t(x,v=2) * dx),
+                       y3=cumsum(dtwin_t(x,v=670) * dx))
+
+
+ggplot(quantil, aes(x=x)) + 
+  geom_line(aes(y = y1, colour="v=1")) + 
+  geom_line(aes(y = y2, colour="v=2")) +
+  geom_line(aes(y = y3, colour="v=670"))+
+  labs(x="x", y="P(X<=x)",colour="d.f. :",
+       title="The cdf of the twin-t distribution, with different df.")+
+  scale_y_continuous(breaks=seq(0,1,.2))+
+  theme(plot.title = element_text( hjust = 0.5,size = 11),
+        legend.position="top", legend.box = "horizontal")
+
+
+#To plot variance and 4th moments of The Twin-t distribution:
+var_twin_t=function(v){(((4*(v+2))/((v+4)*(v-2)))*
+               ((gamma((v/4)+(1/2)))/(gamma(v/4)))^2)}
+
+
+moment4=function(v){(3*(v^2))/((v-4)*(v+6))}
+
+
+ggplot() + xlim(-6,6)+
+  geom_function(aes(colour = "variance"),
+                fun = var_twin_t)+
+  geom_function(aes(colour = "4th moment"),
+                fun = moment4)+
+  labs(x="v", y="moments",colour="moment :",
+       title="The variance and fourth moment of the Twin-t distribution 
+       from -6 to 6.")+
+  theme(plot.title = element_text( hjust = 0.5,size = 11),
+        legend.position="top", legend.box = "horizontal")
+
+#To draw Variance from 2  and 4th moment from 4:
+
+ggplot() + 
+  stat_function(fun=var_twin_t, aes(colour="variance"), xlim=c(2,20))+
+  stat_function(fun=moment4, aes(colour="4th moment"), xlim=c(4,20))+
+  labs(x="v", y="moments",colour="moment :",
+       title="The variance from 2 and fourth moment from 4 of 
+       the Twin-t distribution from 0 to .")+
+  scale_x_continuous(breaks=seq(0,20,2))+
+  theme(plot.title = element_text( hjust = 0.5,size = 11),
+        legend.position="top", legend.box = "horizontal")
+
+
+
+
+#To draw samples from Twin-t distribution with df=3:
+v=3
+x=0
+c=max((((2^(5/2))*(gamma((v/4)+(3/2))))/
+         ((sqrt(pi*v))*(gamma(v/4))*(v+1)))*
+        ((((x^2)/v)+sqrt(1+((x^2)/v)^2))^-((v+1)/2)))
+
+set.seed(10^6)                      
+m = 10^6                         
+x = runif(m, -6,6)
+y = runif(m, 0, c)
+
+#Applying the acceptance rejection method to draw the sample:
+
+s = x[y < (((2^(5/2))*(gamma((v/4)+(3/2))))/
+             ((sqrt(pi*v))*(gamma(v/4))*(v+1)))*
+        ((((x^2)/v)+sqrt(1+((x^2)/v)^2))^-((v+1)/2))]    
+  
+  
+  
+#The samples of the Twin-t distribution as follows:
+head(s,100)
+
+length(s)
+       
+s1=as.data.frame(s)
+
+#To verify of the samples we can Fit of the histogram of the drawn sample from
+#the Twin-t distribution with the actual pdf.
+
+ggplot(data=s1, aes(x=s)) + xlim(-6,6)+
+  geom_histogram(aes(y=..density..),
+                  fill="cornflowerblue",
+                 col="cornflowerblue",
+                 bins = 30) + 
+  geom_function(aes(colour = "Twin-t, df =3"),
+                fun = dtwin_t,args = list(v=3),
+                col="red")+
+  labs(x="x", y="Density",
+       title ="Fitting the actual pdf to the histogram of the drawn sample
+       from the Twin-t diatribution with df=3.")+
+  scale_y_continuous(breaks=seq(0,0.5,.05))+
+  theme(plot.title = element_text( hjust = 0.5,size = 11))
+
+
+#MLE for the df=v of twin-t distribution :
+minuslogL=function(v){-sum(log(dtwin_t(s,v)))}
+
+#Therefore for the above samples s the MLE of v,where v is the df of twin-t distribution is given by "$estimate" value:
+nlm(minuslogL,p=10)
+
+```
+
+
+
+
+
+
+
